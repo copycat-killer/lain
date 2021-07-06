@@ -5,10 +5,9 @@
       * (c) 2010-2012, Peter Hofmann
 
 --]]
-
-local helpers              = require("lain.helpers")
-local wibox                = require("wibox")
 local gmatch, lines, floor = string.gmatch, io.lines, math.floor
+local wibox                = require("wibox")
+local helpers              = require("lain.helpers")
 
 -- Memory usage (ignoring caches)
 -- lain.widget.mem
@@ -17,33 +16,33 @@ local function factory(args)
     args           = args or {}
 
     local mem      = { widget = args.widget or wibox.widget.textbox() }
-    local timeout  = args.timeout or 2
-    local settings = args.settings or function() end
+
+    mem.settings   = args.settings or function() end
+    mem.timeout    = args.timeout or 2
 
     function mem.update()
-        mem_now = {}
         for line in lines("/proc/meminfo") do
             for k, v in gmatch(line, "([%a]+):[%s]+([%d]+).+") do
-                if     k == "MemTotal"     then mem_now.total = floor(v / 1024 + 0.5)
-                elseif k == "MemFree"      then mem_now.free  = floor(v / 1024 + 0.5)
-                elseif k == "Buffers"      then mem_now.buf   = floor(v / 1024 + 0.5)
-                elseif k == "Cached"       then mem_now.cache = floor(v / 1024 + 0.5)
-                elseif k == "SwapTotal"    then mem_now.swap  = floor(v / 1024 + 0.5)
-                elseif k == "SwapFree"     then mem_now.swapf = floor(v / 1024 + 0.5)
-                elseif k == "SReclaimable" then mem_now.srec  = floor(v / 1024 + 0.5)
+                if k == "Buffers"      then mem.buf   = floor(v / 1024 + 0.5)
+                elseif k == "Cached"       then mem.cache = floor(v / 1024 + 0.5)
+                elseif k == "MemFree"      then mem.free  = floor(v / 1024 + 0.5)
+                elseif k == "MemTotal"     then mem.total = floor(v / 1024 + 0.5)
+                elseif k == "SReclaimable" then mem.srec  = floor(v / 1024 + 0.5)
+                elseif k == "SwapFree"     then mem.swapf = floor(v / 1024 + 0.5)
+                elseif k == "SwapTotal"    then mem.swap  = floor(v / 1024 + 0.5)
                 end
             end
         end
 
-        mem_now.used = mem_now.total - mem_now.free - mem_now.buf - mem_now.cache - mem_now.srec
-        mem_now.swapused = mem_now.swap - mem_now.swapf
-        mem_now.perc = math.floor(mem_now.used / mem_now.total * 100)
+        mem.swapused = mem.swap - mem.swapf
+        mem.used = mem.total - mem.free - mem.buf - mem.cache - mem.srec
 
-        widget = mem.widget
-        settings()
+        mem.perc = math.floor(mem.used / mem.total * 100)
+
+        mem.settings()
     end
 
-    helpers.newtimer("mem", timeout, mem.update)
+    helpers.newtimer("mem", mem.timeout, mem.update)
 
     return mem
 end
